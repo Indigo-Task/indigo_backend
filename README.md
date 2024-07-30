@@ -16,6 +16,31 @@ Indigo Backend Application provides real-time updates on flight statuses and sen
 2. RabbitMQ server
 3. Npm / Yarn package manager
 
+## Installation
+1. Clone the Repository:
+```
+git clone https://github.com/Indigo-Task/indigo_backend.git
+```
+2. Install Dependencies:
+```
+npm install
+```
+3. Configure Firebase:
+
+Add your configuration to a .env file in the root directory. Example .env file:
+```
+DATABASE = Your_DB_URI
+PORT = PORT
+MONGODB_PASSWORD = your_mongodb_passwd
+NODE_ENV = develpoment or production
+```
+
+4. Start the Development Server:
+
+```
+npm start
+```
+The application will be available at http://localhost:3000.
 ## DESCRIPTION
 The Indigo App is designed to provide real-time flight information and notifications. Users can track flights, receive updates on flight status changes, and manage their notification preferences with ease.
 ### Key Features
