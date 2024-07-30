@@ -1,10 +1,13 @@
 import User from "../models/User.js";
 import Flights from "../models/flights.js";
+import APIFeatures from "../utils/APIFeatures.js";
 import AppError from "../utils/AppError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { sendNotif } from "../utils/sendNotif.js";
 import { createOne, getAll, getOne } from "./handlerFactory.js"
+import amqp from "amqplib/callback_api.js";
 
+const clients = [];
 
 export const updateFlight = catchAsync(async (req, res, next) => {
 
@@ -12,7 +15,6 @@ export const updateFlight = catchAsync(async (req, res, next) => {
         new: true,
         runValidators: true,
     });
-    const users = await User.find({ flightId: updatedFlight.flightId });
 
     // Send notification to each user
     let notificationMessage = `Flight ${updatedFlight.flightId} has been updated.`;
@@ -32,16 +34,41 @@ export const updateFlight = catchAsync(async (req, res, next) => {
         notificationMessage = notificationMessage + `Flight will arrive at ${req.body.actualDeparture}`
     }
 
-    users.forEach(async (user) => {
-        user.notification.push({
-            message: notificationMessage,
-            timestamp: new Date(),
-        });
-        await user.save();
-
-        // Send notification
-        await sendNotif(user, notificationMessage);
+    const features = new APIFeatures(Flights.find(), req.query)
+    .filter()
+    .sort()
+    .limitFields()
+    .paginate();
+  const doc = await features.query;
+    while (clients.length > 0) {
+        const client = clients.pop();
+        client.status(200).json({ status: 'success', result: doc.length, data: doc });
+    }
+    amqp.connect('amqp://localhost', (error0, connection) => {
+    if (error0)  throw error0;
+    connection.createChannel((error1, channel) => {
+      if (error1) throw (error1);
+      const queue = 'notification_tasks';
+        const message = JSON.stringify({id: updatedFlight.flightId, message: notificationMessage })
+      channel.assertQueue(queue, { durable: true });
+      channel.sendToQueue(queue, Buffer.from(message), { persistent: true });
+      console.log('Sent to queue:', message);
     });
+
+    setTimeout(() => {
+      connection.close();
+    }, 500);
+  });
+    // users.forEach(async (user) => {
+    //     user.notification.push({
+    //         message: notificationMessage,
+    //         timestamp: new Date(),
+    //     });
+    //     await user.save();
+
+    //     // Send notification
+    //     await sendNotif(user, notificationMessage);
+    // });
 
     res.status(200).json({
         status: "success",
@@ -60,5 +87,19 @@ export const deleteFlight = catchAsync(async (req, res, next) => {
 });
 
 export const createFlight = createOne(Flights);
-export const getAllFlights = getAll(Flights);
-export const getFlight = getOne(Flights);
+export const getAllFlights = catchAsync(async (req, res, next) => {
+    const lastData = req.query.lastData;
+    const features = new APIFeatures(Flights.find(), req.query)
+      .filter()
+      .sort()
+      .limitFields()
+      .paginate();
+    const doc = await features.query;
+    // SEND RESPONSE
+    if (JSON.stringify(doc) !== lastData) {
+        res.status(200).json({ status: 'success', result: doc.length, data: doc });
+    }else{
+        clients.push(res);
+    }
+  });;
+export const getFlight = getOne(Flights)
