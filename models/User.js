@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 const userSchema = mongoose.Schema({
     recepientToken: {
         type: String,
-        unique: true
+        unique: true,
     },
     contact : {
         type: String,
