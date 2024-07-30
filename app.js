@@ -8,6 +8,7 @@ import router from "./routes/flightRoutes.js";
 import userRouter from "./routes/authRoutes.js";
 import infoRouter from "./routes/infoRoutes.js";
 import hpp from "hpp";
+import ExpressMongoSanitize from "express-mongo-sanitize";
 const app = express();
 
 const limiter = rateLimit({
@@ -23,7 +24,7 @@ app.use(express.json());
 app.use(xss());
 app.use(hpp());
 app.use(express.urlencoded({ extended: false }));
-
+app.use(ExpressMongoSanitize())
 // app.use(express.static(`${__dirname}/public`));
 
 app.use((req, res, next) => {
